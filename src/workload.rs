@@ -330,7 +330,7 @@ impl WorkloadInformation {
         debug!("lookup workload for {addr}");
 
         // 1. Try to find the workload by IP
-        if let Some(_) = self.find_workload(&addr.ip()) {
+        if self.find_workload(&addr.ip()).is_some() {
             // workload found, return
             return;
         }
