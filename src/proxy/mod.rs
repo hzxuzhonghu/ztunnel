@@ -34,6 +34,7 @@ mod inbound;
 mod inbound_passthrough;
 mod outbound;
 mod socks5;
+mod util;
 
 pub struct Proxy {
     inbound: Inbound,
@@ -208,5 +209,3 @@ pub fn to_canonical_ip(ip: SocketAddr) -> IpAddr {
         },
     }
 }
-
-const ERR_TOKIO_RUNTIME_SHUTDOWN: &str = "A Tokio 1.x context was found, but it is being shutdown.";
