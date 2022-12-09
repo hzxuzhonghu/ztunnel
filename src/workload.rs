@@ -309,13 +309,12 @@ impl WorkloadInformation {
     pub async fn fetch_workload(&self, addr: &IpAddr) -> Option<Workload> {
         // Wait for it on-demand, *if* needed
         debug!("lookup workload for {addr}");
-        match self.find_workload(addr) {
-            None => {
-                self.fetch_on_demand(addr).await;
-                self.find_workload(addr)
-            }
-            wl @ Some(_) => wl,
+        let mut workload = self.find_workload(addr);
+        if workload.is_none() {
+            self.fetch_on_demand(addr).await;
+            workload = self.find_workload(addr);
         }
+        workload
     }
 
     pub async fn find_upstream(&self, addr: SocketAddr, hbone_port: u16) -> Option<Upstream> {
@@ -329,15 +328,21 @@ impl WorkloadInformation {
     async fn fetch_address(&self, addr: &SocketAddr) {
         // Wait for it on-demand, *if* needed
         debug!("lookup workload for {addr}");
-        // 1. handle workload ip, if workload not found fallback to clusterIP.
-        if self.find_workload(&addr.ip()).is_none() {
-            // 2. handle clusterIP
-            if self.workload_by_vip_exist(addr) {
-                return;
-            }
-            // if both cache not found, start on demand fetch
-            self.fetch_on_demand(&addr.ip()).await;
+
+        // 1. Try to find the workload by IP
+        if let Some(_) = self.find_workload(&addr.ip()) {
+            // workload found, return
+            return;
         }
+
+        // 2. Handle cluster IP
+        if self.workload_by_vip_exist(addr) {
+            // workload found by VIP, return
+            return;
+        }
+
+        // If both cache lookups failed, start on demand fetch
+        self.fetch_on_demand(&addr.ip()).await;
     }
 
     async fn fetch_on_demand(&self, ip: &IpAddr) {
